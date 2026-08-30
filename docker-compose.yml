@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  agentx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - agentx-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - agentx-network
+    volumes:
+      - redis-data:/data
+
+networks:
+  agentx-network:
+    driver: bridge
+
+volumes:
+  redis-data:
