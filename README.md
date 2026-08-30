@@ -76,7 +76,8 @@ AgentX uses a modular agent-based architecture with concurrent execution and fle
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone AgentX
+
    cd AgentX
    ```
 
