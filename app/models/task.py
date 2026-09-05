@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, Field, field_validator
+from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, field_validator
 
 from app.core.security import sanitize_input
 
@@ -45,7 +45,12 @@ class TaskRequest(BaseModel):
     """
 
     task_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    input_data: SanitizedStr = Field(..., min_length=1, max_length=50_000)
+    input_data: SanitizedStr = Field(
+        ...,
+        min_length=1,
+        max_length=50_000,
+        validation_alias=AliasChoices("input_data", "input"),
+    )
     metadata: dict = Field(default_factory=dict)
 
     @field_validator("task_id")
@@ -75,3 +80,14 @@ class TaskResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = None
+
+
+class DocumentExtractResponse(BaseModel):
+    """Schema for document text extraction responses."""
+
+    filename: str
+    content: str
+    char_count: int
+    format: str
+    truncated: bool = False
+    metadata: dict = Field(default_factory=dict)

@@ -1,34 +1,7 @@
-"""Tests for the task API routes."""
+import io
 
-from __future__ import annotations
-
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
-from httpx import ASGITransport, AsyncClient
-from langchain_core.messages import AIMessage
-
-from app.main import app
-
-
-def _make_mock_llm():
-    mock = MagicMock()
-    mock.ainvoke = AsyncMock(return_value=AIMessage(content="Mocked analysis."))
-    return mock
-
-
-@pytest.fixture
-async def client():
-    """Create an async test client with mocked LLM."""
-    # Inject mock LLM into the app's agent manager after startup
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        # Patch all agents to use mock LLM
-        if hasattr(app.state, "agent_manager"):
-            for agent_id in list(app.state.agent_manager._registry.keys()):
-                agent = app.state.agent_manager._registry[agent_id]
-                agent._llm = _make_mock_llm()
-        yield c
+import docx
+from httpx import AsyncClient
 
 
 class TestTaskRoutes:
@@ -83,3 +56,96 @@ class TestTaskRoutes:
             headers={"X-API-Key": "test-key"},
         )
         assert resp.status_code == 404
+
+    async def test_list_tasks(self, client: AsyncClient) -> None:
+        # Create a task
+        await client.post(
+            "/api/v1/tasks",
+            json={"input": "Review this agreement."},
+            headers={"X-API-Key": "test-key"},
+        )
+        resp = await client.get(
+            "/api/v1/tasks",
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code == 200
+        tasks = resp.json()
+        assert isinstance(tasks, list)
+        assert len(tasks) >= 1
+
+    async def test_extract_text_txt_success(self, client: AsyncClient) -> None:
+        file_content = (
+            b"Clause 9. Confidentiality and non-disclosure obligations shall endure 3 years."
+        )
+        files = {"file": ("nda_clause.txt", file_content, "text/plain")}
+        resp = await client.post(
+            "/api/v1/tasks/extract-text",
+            files=files,
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["filename"] == "nda_clause.txt"
+        assert "Confidentiality" in data["content"]
+        assert data["format"] == "txt"
+        assert data["char_count"] > 0
+
+    async def test_extract_text_docx_success(self, client: AsyncClient) -> None:
+        doc = docx.Document()
+
+        doc.add_paragraph("Agreement for legal services between Client and Attorney.")
+        buf = io.BytesIO()
+        doc.save(buf)
+
+        files = {
+            "file": (
+                "services.docx",
+                buf.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        }
+        resp = await client.post(
+            "/api/v1/tasks/extract-text",
+            files=files,
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["filename"] == "services.docx"
+        assert "Agreement for legal services" in data["content"]
+        assert data["format"] == "docx"
+
+    async def test_extract_text_unsupported_format(self, client: AsyncClient) -> None:
+        files = {"file": ("malicious.exe", b"fake binary", "application/octet-stream")}
+        resp = await client.post(
+            "/api/v1/tasks/extract-text",
+            files=files,
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code == 400
+        assert "Unsupported file format" in resp.json()["detail"]
+
+    async def test_upload_document_task_success(self, client: AsyncClient) -> None:
+        file_content = b"Contract Review: Party A indemnifies Party B against all losses."
+        files = {"file": ("contract.txt", file_content, "text/plain")}
+        data = {"task_id": "upload-doc-task-001"}
+        resp = await client.post(
+            "/api/v1/tasks/upload",
+            files=files,
+            data=data,
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code == 200
+        res = resp.json()
+        assert res["task_id"] == "upload-doc-task-001"
+        assert res["status"] in ("completed", "failed")
+
+    async def test_upload_document_task_unsupported_format(self, client: AsyncClient) -> None:
+        files = {"file": ("evidence.png", b"image bytes", "image/png")}
+        resp = await client.post(
+            "/api/v1/tasks/upload",
+            files=files,
+            headers={"X-API-Key": "test-key"},
+        )
+        assert resp.status_code == 400
+        assert "Unsupported file format" in resp.json()["detail"]

@@ -1,31 +1,6 @@
 """Tests for the logs API routes."""
 
-from __future__ import annotations
-
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
-from httpx import ASGITransport, AsyncClient
-from langchain_core.messages import AIMessage
-
-from app.main import app
-
-
-def _make_mock_llm():
-    mock = MagicMock()
-    mock.ainvoke = AsyncMock(return_value=AIMessage(content="Mocked."))
-    return mock
-
-
-@pytest.fixture
-async def client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        if hasattr(app.state, "agent_manager"):
-            for agent_id in list(app.state.agent_manager._registry.keys()):
-                agent = app.state.agent_manager._registry[agent_id]
-                agent._llm = _make_mock_llm()
-        yield c
+from httpx import AsyncClient
 
 
 class TestLogRoutes:

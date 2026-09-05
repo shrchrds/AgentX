@@ -92,5 +92,5 @@ def create_memory_store(backend: str) -> MemoryStore:
         return RedisMemoryStore()
     else:
         raise ValueError(
-            f"Unknown memory backend: {backend!r}. " f"Valid options: 'memory', 'faiss', 'redis'."
+            f"Unknown memory backend: {backend!r}. Valid options: 'memory', 'faiss', 'redis'."
         )

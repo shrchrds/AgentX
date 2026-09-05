@@ -5,14 +5,11 @@ orchestrator.run_workflow(TaskRequest) → TaskResponse.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from langchain_core.language_models import FakeListChatModel
 
-from app.agents.contract_review import ContractReviewAgent
 from app.agents.manager import AgentManager
-from app.memory.backends.in_memory import InMemoryStore
 from app.models.agent import AgentResponse, AgentType
 from app.models.task import TaskRequest, TaskStatus
 from app.orchestrator.graph import AgentOrchestrator
@@ -80,6 +77,7 @@ class TestE2EWorkflow:
 
         # Patch all agents to fail
         for agent in agent_manager._registry.values():
+
             async def failing_process(*args, **kwargs):
                 return AgentResponse(
                     task_id=args[0],
@@ -119,6 +117,7 @@ class TestE2EWorkflow:
             if agent.agent_type == AgentType.CONTRACT_REVIEW:
                 agent._llm = mock_llm
             else:
+
                 async def failing_process(*args, **kwargs):
                     return AgentResponse(
                         task_id=args[0],
@@ -216,7 +215,9 @@ class TestAgentHotPlug:
         agent_manager = AgentManager(memory_store=memory_store, llm=mock_llm)
 
         # Register a second contract review agent
-        info = agent_manager.register_agent(AgentType.CONTRACT_REVIEW, agent_id="custom-contract-001")
+        info = agent_manager.register_agent(
+            AgentType.CONTRACT_REVIEW, agent_id="custom-contract-001"
+        )
 
         # Verify it was registered
         agents = agent_manager.list_agents()
@@ -243,7 +244,9 @@ class TestAgentHotPlug:
 
         # Verify it was removed
         remaining_agents = agent_manager.list_agents()
-        remaining_contract = [a for a in remaining_agents if a.agent_type == AgentType.CONTRACT_REVIEW]
+        remaining_contract = [
+            a for a in remaining_agents if a.agent_type == AgentType.CONTRACT_REVIEW
+        ]
         assert len(remaining_contract) == initial_count - 1
         assert not any(a.agent_id == agent_to_remove.agent_id for a in remaining_contract)
 
@@ -257,7 +260,7 @@ class TestAgentHotPlug:
         mock_llm_identifiable = FakeListChatModel(
             responses=["IDENTIFIABLE_OUTPUT: Special agent executed"]
         )
-        info = agent_manager.register_agent(AgentType.CONTRACT_REVIEW, agent_id="identifiable-001")
+        agent_manager.register_agent(AgentType.CONTRACT_REVIEW, agent_id="identifiable-001")
         identifiable_agent = agent_manager.get_agent("identifiable-001")
         identifiable_agent._llm = mock_llm_identifiable
 
@@ -273,7 +276,9 @@ class TestAgentHotPlug:
         assert result.status == TaskStatus.COMPLETED
         assert result.output_data is not None
         # The new agent should have contributed (its output should be in the final aggregation)
-        assert "IDENTIFIABLE_OUTPUT" in result.output_data or "identifiable-001" in result.output_data
+        assert (
+            "IDENTIFIABLE_OUTPUT" in result.output_data or "identifiable-001" in result.output_data
+        )
 
 
 class TestMemoryIntegration:
@@ -326,6 +331,7 @@ class TestTimeout:
 
         # Make all agents slow
         for agent in agent_manager._registry.values():
+
             async def slow_process(task_id, input_data, context):
                 await asyncio.sleep(10)  # Longer than timeout
                 return AgentResponse(

@@ -25,7 +25,15 @@ dependencies = [
     "python-dotenv>=1.1",
     "slowapi>=0.1.9",
     "httpx>=0.28",
+    "python-docx>=1.1.0",
+    "python-multipart>=0.0.18",
+    "pypdf>=5.0.0",
+    "pycryptodome>=3.20.0",
+    "cryptography>=43.0.0",
 ]
+
+[project.scripts]
+agentx = "app.cli:main"
 
 [project.optional-dependencies]
 dev = [
