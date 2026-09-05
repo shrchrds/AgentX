@@ -1,14 +1,18 @@
 # AgentX — Enterprise Multi-Agent Legal Intelligence Framework
 
-[![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/shrchrds/AgentX/actions/workflows/ci.yml/badge.svg)](https://github.com/shrchrds/AgentX/actions/workflows/ci.yml)
+[![Python Version](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![Orchestration](https://img.shields.io/badge/LangGraph-StateGraph-orange.svg)](https://python.langchain.com/docs/langgraph)
 [![LLM](https://img.shields.io/badge/LLM-OpenAI%20GPT--4-412991.svg)](https://openai.com/)
 [![Tests](https://img.shields.io/badge/Tests-144%20Passed%20(100%25)-success.svg)](tests/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Docker](https://img.shields.io/badge/Container-GHCR%20Ready-2496ED?logo=docker)](https://github.com/shrchrds/AgentX/pkgs/container/agentx)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](Dockerfile)
 
 > **Production-grade multi-agent collaboration platform for complex legal document analysis, contract risk scoring, and legal precedent research using dynamic LangGraph DAG workflows, multi-format document ingestion, and hybrid vector memory.**
+
 
 ---
 
@@ -31,6 +35,7 @@
   - [Docker & Docker Compose](#docker--docker-compose)
 - [API Documentation](#api-documentation)
 - [Testing & Quality Assurance](#testing--quality-assurance)
+- [CI/CD & DevOps Automation](#cicd--devops-automation)
 - [AI Engineer Portfolio Competencies](#ai-engineer-portfolio-competencies)
 - [Project Structure](#project-structure)
 - [License](#license)
@@ -346,6 +351,59 @@ ruff format --check app tests
 
 ---
 
+## CI/CD & DevOps Automation
+
+AgentX implements an enterprise CI/CD pipeline using **GitHub Actions**, **Docker Buildx**, and **Dependabot** to maintain continuous quality, zero regression, and automated delivery.
+
+```
+                    ┌─────────────────────────┐
+                    │ Push / PR to main       │
+                    └───────────┬─────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        ▼                       ▼                       ▼
+┌───────────────┐       ┌───────────────┐       ┌───────────────┐
+│ Backend Lint  │       │ Backend Tests │       │  Frontend CI  │
+│ Ruff + Black  │       │ Matrix 3.10-13│       │ Oxlint + Vite │
+└───────────────┘       └───────┬───────┘       └───────────────┘
+                                │
+        ┌───────────────────────┴───────────────────────┐
+        ▼                                               ▼
+┌───────────────┐                               ┌───────────────┐
+│Security Scans │                               │Docker Validate│
+│Bandit + Audit │                               │Buildx+Compose │
+└───────────────┘                               └───────────────┘
+                                │
+                                ▼ (On Tag / Release)
+                ┌───────────────────────────────┐
+                │        CD & Release           │
+                │ • Publish to GHCR             │
+                │ • Attach Wheel/Sdist to Rel.  │
+                └───────────────────────────────┘
+```
+
+### 1. Continuous Integration (`.github/workflows/ci.yml`)
+- **Backend Quality & Style**: Enforces PEP 8 compliance, import sorting, and code quality using `ruff check app tests` and `black --check app tests`.
+- **Matrix Testing**: Validates core framework and LangGraph orchestration across **Python 3.10, 3.11, 3.12, and 3.13** using live Redis service containers (`redis:7-alpine`).
+- **Test Coverage**: Generates XML and terminal coverage reports (`pytest-cov`), archiving artifacts for historical tracking.
+- **Automated Security Scans**:
+  - `bandit -r app -ll -ii` performs AST static analysis to catch common security risks.
+  - `pip-audit` detects known vulnerabilities across transitive dependencies.
+- **Frontend CI**: Enforces code quality via `oxlint` and validates production bundle generation with `vite build`.
+- **Docker & Compose Validation**: Exercises `docker/build-push-action` and tests `docker compose config` to guarantee zero drift in container orchestration.
+
+### 2. Continuous Delivery & Packaging (`.github/workflows/release.yml`)
+- **Container Registry Publication**: Upon release publishing or tag push (`v*.*.*`), builds multi-architecture images (`linux/amd64`, `linux/arm64`) and pushes to **GitHub Container Registry (GHCR)** (`ghcr.io/shrchrds/agentx`).
+- **Python Distribution Artifacts**: Builds standard `sdist` and `wheel` distribution packages via `python -m build`, validates integrity with `twine check`, and attaches assets directly to the GitHub release.
+
+### 3. Automated Dependency Maintenance (`.github/dependabot.yml`)
+- Weekly automated scans and pull requests for:
+  - Python dependencies (`pip`)
+  - Node.js dependencies (`npm`)
+  - GitHub Actions dependencies (`github-actions`)
+
+---
+
 ## AI Engineer Portfolio Competencies
 
 This repository demonstrates the core engineering skills expected of a Senior / Staff AI Engineer:
@@ -363,6 +421,11 @@ This repository demonstrates the core engineering skills expected of a Senior / 
 
 ```
 AgentX/
+├── .github/                      # GitHub automation & CI/CD
+│   ├── dependabot.yml            # Automated dependency updates
+│   └── workflows/
+│       ├── ci.yml                # Multi-matrix test, lint, security & build CI
+│       └── release.yml           # GHCR container push & wheel release CD
 ├── app/
 │   ├── agents/                   # Specialized legal agent implementations
 │   │   ├── base.py               # LegalAgent abstract base with injection defense
@@ -408,9 +471,10 @@ AgentX/
 │   ├── PRD.pdf                   # Product Requirements Document
 │   ├── HLD.pdf                   # High-Level Architecture Design
 │   └── lld.pdf                   # Low-Level Component Design
+├── .dockerignore                 # Docker build context exclusions
 ├── .env.example                  # Environment configuration template
 ├── pyproject.toml                # Package definition & dependencies
-├── Dockerfile                    # Containerization specification
+├── Dockerfile                    # Containerization specification with health checks
 ├── docker-compose.yml            # Multi-service composition (App + Redis)
 ├── run.py                        # Unified cross-platform launcher
 ├── start.bat                     # Windows 1-click execution script

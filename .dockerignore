@@ -1,0 +1,40 @@
+# Git & VCS
+.git/
+.gitignore
+
+# Python virtual environment & cache
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node & Frontend build
+frontend/node_modules/
+frontend/dist/
+frontend/.oxlintrc.json
+
+# Environment variables & secrets
+.env
+*.env.local
+
+# Documentation & Assets
+Docs/
+*.md
+!README.md
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
